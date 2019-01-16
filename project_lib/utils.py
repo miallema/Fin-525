@@ -206,5 +206,5 @@ def evaluate(real_data, prediction):
     verification = prediction.join(real_data,how='left')
     verification[real_data.columns] = verification[real_data.columns].diff()
     verification = verification.dropna()
-    result = (verification[prediction.columns].values * verification[real_data.columns]).sum().sum()
+    result = (verification[prediction.columns].values * verification[real_data.columns]).sum()
     return result
