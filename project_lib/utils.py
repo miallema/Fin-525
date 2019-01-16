@@ -23,6 +23,29 @@ DATA_CLEAN_DIR = os.path.join(CWD, 'data/Clean/')
 
 
 def predict_stock(test_window, model, stock_name, window_size, num_values_to_predict):
+    '''
+    Based on a window of test data, predicts the next data points by iteratively
+    making a prediction and then adding it to the model input to predict a further
+    one.
+
+    Parameters
+    ----------
+    test_window: Pandas DataFrame
+        Dataframe containing test datapoints.
+    model: Pytorch model
+        LSTM model that makes the predictions.
+    stock_name: string
+        Name of the stock to predict.
+    window_size: int
+        Size of input window to model.
+    num_values_to_predict: int
+        Number of times the model should be ran, sliding it forward at each point.
+
+    Returns
+    -------
+    predictions: Pandas DataFrame
+        Dataframe containing the signs of the predicted values
+    '''
     input_test = test_window[stock_name].iloc[:window_size-1].values
     input_test = torch.Tensor(input_test).reshape(1,-1,1)
 
@@ -39,6 +62,25 @@ def predict_stock(test_window, model, stock_name, window_size, num_values_to_pre
     return pd.Series(predictions, index=pred_indices).rename(stock_name + '_pred')
 
 def sliding_predictions(df, train_samples=500, window_size=25):
+    '''
+    Function training and predicting over an entire period using a sliding window.
+
+    Parameters
+    ----------
+    df: Pandas DataFrame
+        DataFrame containing the whole period of data points (including training and test)
+    train_samples: int, optional
+        Number of data points to be used for training the model each time.
+    window_size: int, optional
+        Size of the prediction window and amount to shift it after each iteration.
+
+    Returns
+    -------
+    all_preds: Pandas DataFrame
+        Predictions for whole test window.
+    all_cumsum: Pandas DataFrame
+        Predictions for whole test window, where for each window, the cumsum was calculated.
+    '''
     batch_size = 32
     num_samples = len(df)
     print('Total samples: {}'.format(num_samples))
@@ -64,7 +106,7 @@ def sliding_predictions(df, train_samples=500, window_size=25):
                                    num_workers=8, drop_last=True, pin_memory=True)
 
         # Initialize the model
-        model = LSTM_Model(1, hidden_size=64, num_layers=1, dropout=0)
+        model = LSTM_Model(1, hidden_size=64, num_layers=1)
         criterion = torch.nn.MSELoss()
         learning_rate = 5e-3
         weight_decay = 1e-3 # L2 regularizer parameter
@@ -74,7 +116,6 @@ def sliding_predictions(df, train_samples=500, window_size=25):
             criterion.cuda()
 
         # Train the model
-
         num_epochs = 50
         for epoch in range(num_epochs):
             for inputs, labels in train_loader:
@@ -107,6 +148,21 @@ def sliding_predictions(df, train_samples=500, window_size=25):
     return all_preds, all_cumsum
 
 def plot_rolling_window(df_sign, year, train_samples=500, window_size=25):
+    '''
+    Computes and plots the predictions from the rolling window as a cumsum over
+    each segment.
+
+    Parameters
+    ----------
+    df_sign: Pandas DataFrame
+        The input DataFrame containing the specified year in full.
+    year: int
+        The year to train and predict on.
+    train_samples: int, optional
+        Number of datapoints to be used for training.
+    window_size: int, optional
+        Size of prediction window.
+    '''
     stocks = ['ABBN', 'CSGN', 'NESN', 'NOVN']
     stocks_pred = ['ABBN_pred', 'CSGN_pred', 'NESN_pred', 'NOVN_pred']
 
