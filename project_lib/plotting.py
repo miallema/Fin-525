@@ -6,7 +6,7 @@ import matplotlib.dates as mdates
 from matplotlib.dates import DateFormatter
 
 
-def plot_1ecdf(df, stock_name, ax):
+def plot_1ecdf(df, stock_name, ax, mode='log-log'):
     '''
     Computes and plots the 1 minus ECDF of a given stock.
 
@@ -16,12 +16,24 @@ def plot_1ecdf(df, stock_name, ax):
         DataFrame containing log-returns.
     stock_name: string
         Name of the stock to plot.
-    ax: matplotlib ax
+    ax: matplotlib.axes
         Subplot ax to plot on.
+    mode: string
+        log-lin or log-log
     '''
     ecdf = ECDF(abs(df[stock_name]))
-    ax.plot(ecdf.x[:-1], np.log(1-ecdf.y[:-1]))
-    ax.set_xlabel('|r|')
+    ecdf_x, ecdf_y = ecdf.x, ecdf.y
+    non_zero_idxs = np.where(np.all([ecdf_x > 0,ecdf_y > 0], axis=0))
+    ecdf_x = ecdf_x[non_zero_idxs]
+    ecdf_y = ecdf_y[non_zero_idxs]
+    if mode == 'lin-log':
+        ax.plot(ecdf_x, np.log(1-ecdf_y))
+        ax.set_xlabel('|r|')
+    elif mode == 'log-log':
+        ax.plot(np.log(ecdf_x), np.log(1-ecdf_y))
+        ax.set_xlabel('log |r|')
+    else:
+        raise ValueError('Please enter lin-log or log-log as the plotting mode.')
     ax.set_ylabel('log P_>(|r|)')
     ax.set_title('1 - ECDF for {}'.format(stock_name))
 
